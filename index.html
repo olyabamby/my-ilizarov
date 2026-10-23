@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1e302d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Мой Илизаров">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Мой Илизаров</title>
+<style>
+:root{--ink:#18312a;--green:#2f6b50;--pale:#dcebdd;--cream:#f7f5ed;--card:#fffefa;--steel:#a9b1b2;--muted:#697773;--line:#e6e5dc}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:#1e302d;color:white;padding:calc(18px + env(safe-area-inset-top)) 18px 18px}
+h1{font-size:24px;margin:0 0 5px}header p{margin:0;color:#d2dfd8;font-size:14px}
+main{max-width:720px;margin:auto;padding:14px 13px calc(28px + env(safe-area-inset-bottom))}
+.tabs{display:flex;background:#e9e7dc;padding:4px;border-radius:16px;gap:4px;margin-bottom:15px}
+.tabs button{border:0;border-radius:13px;flex:1;padding:12px 7px;background:transparent;color:var(--ink);font-weight:650;font-size:15px}
+.tabs button.active{background:var(--green);color:white;box-shadow:0 2px 6px #0002}
+.card{background:var(--card);border:1px solid var(--line);border-radius:19px;padding:15px;margin-bottom:13px;box-shadow:0 3px 14px #243c3010}
+.row{display:flex;align-items:center;gap:10px}.between{justify-content:space-between}.muted{color:var(--muted)}.small{font-size:12px}.section-title{font-size:18px;font-weight:750;margin:2px 0 8px}
+.ring-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 10px}
+.turn{text-align:center;min-width:0}.ring-button{border:0;background:transparent;width:100%;padding:0;cursor:pointer}
+.ring{width:min(100%,190px);aspect-ratio:1.2;position:relative;margin:auto;display:grid;place-items:center;transition:transform .22s}
+.ring svg{width:100%;height:100%;overflow:visible;filter:drop-shadow(0 3px 2px #0002)}
+.ring.done{transform:rotate(-4deg)}.ring.done .outer{stroke:#3d8661}
+.ring-number{position:absolute;width:39%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:linear-gradient(145deg,#fff,#d9dedb);border:2px solid #a5adaa;box-shadow:inset 0 1px 4px #fff,0 2px 4px #0002;font-size:31px;font-weight:750}
+.ring.done .ring-number{background:linear-gradient(145deg,#e9f5e9,#b9d9c1);border-color:#548a68}
+.ring-mark{position:absolute;right:7%;bottom:5%;background:#fff;border:1px solid #c9ceca;border-radius:50%;width:35px;height:35px;display:grid;place-items:center;font-size:18px}
+.ring.done .ring-mark{background:#2f8057;color:white;border-color:#2f8057}
+.turn-time{font-size:20px;font-weight:750;margin-top:1px}.turn-name{font-size:13px;margin:3px 0 7px}
+.status{display:inline-block;border-radius:99px;background:#edeee9;color:#53615b;padding:5px 12px;font-size:12px}.status.done{background:#dcebdd;color:#245c3e}
+label{font-size:13px;color:var(--muted);display:block;margin-bottom:5px}
+input,select{font:inherit;color:var(--ink);background:#fff;border:1px solid #d8ddd7;border-radius:10px;padding:10px;width:100%;min-width:0}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.settings-grid .wide{grid-column:1/-1}
+.note{background:#edf3e9;border-radius:14px;padding:12px;font-size:13px;line-height:1.4}
+button.primary,.btn{border:0;border-radius:12px;background:var(--green);color:white;padding:11px 14px;font:inherit;font-weight:650;cursor:pointer}
+button.secondary{border:1px solid #d7d9d1;border-radius:12px;background:transparent;color:var(--ink);padding:10px 12px;font:inherit}
+.next{display:flex;gap:12px;align-items:center;background:#e8f1e6;border:1px solid #c7dbc8;border-radius:17px;padding:14px;margin-bottom:13px}
+.next-icon{width:48px;height:48px;border-radius:14px;background:#3b9367;color:white;display:grid;place-items:center;font-size:24px;flex-shrink:0}
+.calendar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.calendar-head button{border:0;background:transparent;font-size:22px;padding:5px 10px;color:var(--ink)}
+.calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center}.weekday{font-size:11px;color:var(--muted);padding:4px 0}
+.day{min-height:39px;border:0;border-radius:10px;background:transparent;position:relative;color:var(--ink);font-size:14px}
+.day.selected{background:#dcebdd;outline:2px solid #6e9b78}.day .dots{position:absolute;bottom:4px;left:0;right:0;display:flex;justify-content:center;gap:3px}.dot{width:5px;height:5px;border-radius:50%;display:inline-block}
+.day.forecast:after{content:"";position:absolute;inset:2px;border:1px dashed #4e8966;border-radius:9px;pointer-events:none}
+.legend{display:flex;flex-wrap:wrap;gap:8px 12px;font-size:10px;color:var(--muted);margin-top:12px}
+.event{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--line)}.event:last-child{border-bottom:0}.event-dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.event-date{font-size:12px;margin-bottom:3px}.event-title{font-size:14px;font-weight:700}.event-detail{font-size:12px;color:var(--muted);margin-top:3px}
+.event-list{margin-top:8px}.empty{font-size:13px;color:var(--muted);padding:10px 0}
+.hidden{display:none!important}.footer-note{font-size:11px;color:var(--muted);line-height:1.45;margin:12px 3px}
+@media(min-width:560px){main{padding:20px}.ring-grid{gap:22px}.card{padding:18px}}
+</style>
+</head>
+<body>
+<header><h1>Мой Илизаров</h1><p>Личный план восстановления · 2026</p></header>
+<main>
+  <div class="tabs" role="tablist">
+    <button id="tabTurns" class="active" role="tab" aria-selected="true">🔧 Крутки</button>
+    <button id="tabDressings" role="tab" aria-selected="false">▦ Перевязки</button>
+  </div>
+
+  <section id="turnsPanel">
+    <div class="card">
+      <div class="row between" style="margin-bottom:15px">
+        <div><div class="section-title" id="todayHeading">Крутки на сегодня</div><div class="muted small">Нажми на кольцо, чтобы отметить выполнение</div></div>
+        <span class="status">4 в день</span>
+      </div>
+      <div class="ring-grid" id="ringGrid"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Ваш режим дня</div>
+      <div class="settings-grid">
+        <div><label for="wake">Подъём</label><input id="wake" type="time" value="08:00"></div>
+        <div><label for="first">Первая крутка</label><input id="first" type="time" value="12:00"></div>
+        <div class="wide"><label for="bed">Отбой</label><input id="bed" type="time" value="00:00"></div>
+      </div>
+      <div class="note" style="margin-top:13px" id="intervalNote"></div>
+      <button class="secondary" style="width:100%;margin-top:12px" id="resetTurns">Сбросить отметки за сегодня</button>
+    </div>
+  </section>
+
+  <section id="dressingsPanel" class="hidden">
+    <div class="next">
+      <div class="next-icon">▧</div><div><div class="muted small">Следующая предполагаемая перевязка</div><strong id="nextDate" style="font-size:18px">—</strong><div id="nextMeta" class="muted small" style="margin-top:4px">По выбранному интервалу</div></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Прогноз перевязок</div>
+      <div class="settings-grid">
+        <div><label for="interval">Интервал прогноза</label><select id="interval"><option value="1">Каждый день</option><option value="2" selected>Через день</option><option value="3">Раз в 3 дня</option><option value="4">Раз в 4 дня</option><option value="7">Раз в 7 дней</option></select></div>
+        <div><label for="horizon">Показать вперёд</label><select id="horizon"><option value="7">7 дней</option><option value="14" selected>14 дней</option><option value="30">30 дней</option></select></div>
+      </div>
+      <p class="footer-note">Интервал должен соответствовать плану лечащего врача. Пунктиром отмечены прогнозные даты, а не подтверждённые назначения.</p>
+    </div>
+    <div class="card">
+      <div class="calendar-head"><button id="prevMonth" aria-label="Предыдущий месяц">‹</button><strong id="monthTitle">Октябрь 2026</strong><button id="nextMonth" aria-label="Следующий месяц">›</button></div>
+      <div class="calendar" id="calendar"></div>
+      <div class="legend">
+        <span>🟣 Госпитализация</span><span>🔴 Операция</span><span>🔵 Перевязка</span><span>🟢 Крутка</span><span>◌ Прогноз</span>
+      </div>
+      <div class="note" id="selectedDayNote" style="margin-top:13px">Выбери дату, чтобы увидеть события.</div>
+    </div>
+    <div class="card">
+      <div class="row between"><div class="section-title">История событий</div><button class="primary" id="addEvent">＋ Добавить</button></div>
+      <div class="event-list" id="eventList"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Напоминания</div>
+      <div class="settings-grid">
+        <div><label for="reminderTime">Время напоминания</label><input id="reminderTime" type="time" value="09:00"></div>
+        <div style="display:flex;align-items:end"><button class="primary" id="enableReminder" style="width:100%">Проверить уведомления</button></div>
+      </div>
+      <p class="footer-note" id="notificationStatus">Веб-уведомления зависят от браузера и версии iOS. Установка на экран «Домой» не гарантирует одинаковое поведение на всех устройствах.</p>
+    </div>
+  </section>
+  <p class="footer-note">Данные сохраняются локально в браузере. Не очищай данные сайта, если хочешь сохранить историю. Прогноз перевязок не заменяет медицинское назначение.</p>
+</main>
+
+<dialog id="eventDialog" style="border:0;border-radius:18px;max-width:440px;width:calc(100% - 28px);padding:20px">
+  <form id="eventForm">
+    <h2 style="margin:0 0 15px;font-size:20px">Новое событие</h2>
+    <label for="eventDate">Дата</label><input id="eventDate" type="date" required>
+    <label for="eventKind" style="margin-top:12px">Тип события</label>
+    <select id="eventKind"><option value="dressing">Перевязка</option><option value="hospitalization">Госпитализация</option><option value="operation">Операция</option><option value="turn">Крутка</option></select>
+    <label for="eventTitle" style="margin-top:12px">Название</label><input id="eventTitle" placeholder="Например, четвёртая перевязка">
+    <label for="eventDetail" style="margin-top:12px">Заметка</label><input id="eventDetail" placeholder="Необязательно">
+    <div class="row" style="margin-top:18px"><button type="button" class="secondary" id="cancelEvent" style="flex:1">Отмена</button><button type="submit" class="primary" style="flex:1">Сохранить</button></div>
+  </form>
+</dialog>
+<script src="app.js"></script>
+</body>
+</html>

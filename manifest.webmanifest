@@ -1,0 +1,17 @@
+{
+  "name": "Мой Илизаров",
+  "short_name": "Илизаров",
+  "description": "Локальный планировщик круток и перевязок",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f5ed",
+  "theme_color": "#1e302d",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
