@@ -12,8 +12,38 @@ function save(){try{localStorage.setItem('moi-ilizarov-pwa-v2',JSON.stringify(st
 function escapeHTML(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function expectedDayKey(){const d=new Date();if(d.getHours()<7)d.setDate(d.getDate()-1);return iso(d)}
 function dayKey(){return state.activeDay||expectedDayKey()}
-function refreshDayPrompt(){const expected=expectedDayKey(),active=state.activeDay||expected, prompt=$('newDayPrompt');if(prompt){prompt.classList.toggle('hidden',active===expected);const copy=prompt.querySelector('.sub');if(copy)copy.textContent=`Текущая запись: ${fmt(parseISO(active))}. Вчерашние отметки сохранятся. Откроется отдельная запись за ${fmt(parseISO(expected))}.`;}if($('todayHeading'))$('todayHeading').textContent=`Крутки · ${fmt(parseISO(active))}`;}
-function beginNewDay(){const expected=expectedDayKey(),current=dayKey();if(current===expected){refreshDayPrompt();return}state.activeDay=expected;state.selected=expected;if(!state.dailyPlans[expected])state.dailyPlans[expected]={wake:state.wake,first:state.first,bed:state.bed,dailyTarget:Number(state.dailyTarget)||1};save();renderAll();}function mins(t){if(!/^\d\d:\d\d$/.test(t||''))return null;const [h,m]=t.split(':').map(Number);return h<24&&m<60?h*60+m:null}function clock(m){m=(m%1440+1440)%1440;return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`}
+function refreshDayPrompt(){
+ const expected=expectedDayKey(),active=state.activeDay||expected,prompt=$('newDayPrompt');
+ const previous=iso(parseISO(expected));const prevDate=parseISO(expected);prevDate.setDate(prevDate.getDate()-1);const yesterday=iso(prevDate);
+ const todayDone=Array.isArray(state.completed?.[expected])?state.completed[expected]:[];
+ const yesterdayHasData=(state.completed?.[yesterday]?.length||0)>0||!!state.dailyPlans?.[yesterday];
+ const recovery=active===expected&&todayDone.length===4;
+ if(prompt){prompt.classList.toggle('hidden',active===expected&&!recovery);const heading=prompt.querySelector('div');const copy=prompt.querySelector('.sub');const button=$('beginDay');
+  if(recovery){if(heading)heading.textContent='Проверь дату отметок';if(yesterdayHasData){if(copy)copy.textContent=`На ${fmt(parseISO(expected))} отмечены все четыре крутки, а запись за ${fmt(parseISO(yesterday))} уже существует. Если сегодняшние отметки попали сюда по ошибке, можно очистить только ${fmt(parseISO(expected))}; вчерашняя запись останется нетронутой.`;if(button)button.textContent='Очистить отметки за сегодня';}else{if(copy)copy.textContent=`На ${fmt(parseISO(expected))} сохранены все четыре отметки, а за вчера нет записи. Если это вчерашние крутки, можно перенести их на ${fmt(parseISO(yesterday))} и начать сегодняшний день с нуля. Ничего не изменится без твоего подтверждения.`;if(button)button.textContent='Перенести отметки на вчера';}}
+  else {if(heading)heading.textContent='Пора начать новый день';if(copy)copy.textContent=`Текущая запись: ${fmt(parseISO(active))}. Вчерашние отметки останутся в истории. Откроется отдельная запись за ${fmt(parseISO(expected))}.`;if(button)button.textContent='Начать новый день';}
+  prompt.dataset.recovery=recovery?(yesterdayHasData?'clear':'move'):'false';
+ }
+ if($('todayHeading'))$('todayHeading').textContent=`Крутки · ${fmt(parseISO(active))}`;
+}
+function beginNewDay(){
+ const expected=expectedDayKey(),current=dayKey();
+ if(current===expected){
+  if($('newDayPrompt')?.dataset.recovery==='move'||$('newDayPrompt')?.dataset.recovery==='clear'){
+   const mode=$('newDayPrompt').dataset.recovery;const prevDate=parseISO(expected);prevDate.setDate(prevDate.getDate()-1);const yesterday=iso(prevDate);
+   const message=mode==='move'?`Перенести четыре отметки с ${fmt(parseISO(expected))} на ${fmt(parseISO(yesterday))} и оставить сегодняшний день пустым?`:`Удалить только отметки за ${fmt(parseISO(expected))}? Запись за ${fmt(parseISO(yesterday))} и остальные дни останутся нетронутыми.`;
+   if(!confirm(message+' Проверь дату перед подтверждением.'))return;
+   if(mode==='move'){const slots=[...(state.completed[expected]||[])];state.completed[yesterday]=slots;if(state.dailyPlans[expected])state.dailyPlans[yesterday]={...state.dailyPlans[expected]};state.turnLogs=(state.turnLogs||[]).map(l=>l.date===expected?{...l,date:yesterday,id:`${yesterday}-${l.slot}`}:l);}
+   delete state.completed[expected];state.turnLogs=(state.turnLogs||[]).filter(l=>l.date!==expected);
+   state.activeDay=expected;state.selected=expected;
+   if(!state.dailyPlans[expected])state.dailyPlans[expected]={wake:state.wake,first:state.first,bed:state.bed,dailyTarget:Number(state.dailyTarget)||1};
+   save();renderAll();return;
+  }
+  refreshDayPrompt();return;
+ }
+ state.activeDay=expected;state.selected=expected;
+ if(!state.dailyPlans[expected])state.dailyPlans[expected]={wake:state.wake,first:state.first,bed:state.bed,dailyTarget:Number(state.dailyTarget)||1};
+ save();renderAll();
+}function mins(t){if(!/^\d\d:\d\d$/.test(t||''))return null;const [h,m]=t.split(':').map(Number);return h<24&&m<60?h*60+m:null}function clock(m){m=(m%1440+1440)%1440;return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`}
 function turnTimes(date=dayKey()){const p=state.dailyPlans?.[date];const first=p?.first||state.first,bed=p?.bed||state.bed;const a=mins(first),b=mins(bed);if(a===null||b===null)return null;const end=b<=a?b+1440:b;if(end<=a)return null;return [0,1,2,3].map(i=>clock(Math.round(a+(end-a)*i/3)))}
 function planFor(date){return state.dailyPlans?.[date]||{dailyTarget:Number(state.dailyTarget)||1,first:state.first,bed:state.bed,wake:state.wake}}
 function totalProgress(){let total=0;for(const [date,slots] of Object.entries(state.completed||{})){const p=planFor(date);total+=(Math.max(.1,Number(p.dailyTarget)||1)*Math.min(4,slots.length))/4}return Math.round(total*10)/10}
@@ -38,7 +68,7 @@ function plural(n,a,b,c){const n10=n%10,n100=n%100;return n100>=11&&n100<=14?c:n
 function renderTurnHistory(){
  const host=$('turnHistory');
  const dates=[...new Set([...Object.keys(state.completed||{}),...Object.keys(state.dailyPlans||{})])]
-   .filter(d=>/^\\d{4}-\\d{2}-\\d{2}$/.test(d))
+   .filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d))
    .sort((a,b)=>b.localeCompare(a));
  host.innerHTML='';
  if(!dates.length){host.innerHTML='<div class="empty">История появится после первой сохранённой отметки или плана дня.</div>';return}
@@ -77,12 +107,10 @@ function checkDueReminders(){if(!state.remindersEnabled||!('Notification'in wind
 setInterval(checkDueReminders,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkDueReminders()});
 
 (async()=>{db=await openDB();let stored=await dbRead();if(!stored){try{stored=JSON.parse(localStorage.getItem('moi-ilizarov-pwa-v2')||localStorage.getItem('moi-ilizarov-pwa-v1')||'null')}catch{stored=null}}if(stored){state={...defaults(),...stored,completed:stored.completed||{},dailyPlans:stored.dailyPlans||{},totalGoal:stored.totalGoal||30,interval:Math.max(1,Number(stored.interval)||2),events:(stored.events||defaults().events).map((e,i)=>({...e,id:e.id||`legacy-${i}`})),turnLogs:stored.turnLogs||[]};if(stored.completed&&!stored.turnLogs){state.turnLogs=Object.entries(stored.completed).flatMap(([date,slots])=>slots.map(slot=>({id:`${date}-${slot}`,date,slot,time:null})))}}else state=defaults();
-// Open today's workspace by default. Historical days remain intact in their own date keys.
+// Always open the current day's workspace on startup. Historical records remain keyed by their own dates and can be opened from history.
 const expected=expectedDayKey();
-if(!state.activeDay) {
-  const dates=[...Object.keys(state.completed||{}),...Object.keys(state.dailyPlans||{})].sort();
-  state.activeDay=dates.length?dates[dates.length-1]:expected;
-}
-if(state.activeDay!==expected && !state.completed?.[state.activeDay]?.length && !state.dailyPlans?.[state.activeDay]) state.activeDay=expected;
+state.activeDay=expected;
+state.selected=state.selected||expected;
+if(!state.dailyPlans[expected])state.dailyPlans[expected]={wake:state.wake,first:state.first,bed:state.bed,dailyTarget:Number(state.dailyTarget)||1};
 save();$('interval').value=state.interval;$('horizon').value=state.horizon;if($('remindersEnabled'))$('remindersEnabled').checked=!!state.remindersEnabled;updateReminderStatus();renderAll()})();
 if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
