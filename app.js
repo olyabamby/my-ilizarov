@@ -12,7 +12,7 @@ function save(){try{localStorage.setItem('moi-ilizarov-pwa-v2',JSON.stringify(st
 function escapeHTML(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function expectedDayKey(){const d=new Date();if(d.getHours()<7)d.setDate(d.getDate()-1);return iso(d)}
 function dayKey(){return state.activeDay||expectedDayKey()}
-function refreshDayPrompt(){const expected=expectedDayKey(),active=state.activeDay||expected, prompt=$('newDayPrompt');if(prompt)prompt.classList.toggle('hidden',active===expected);if($('todayHeading'))$('todayHeading').textContent=`Крутки · ${fmt(parseISO(active))}`;}
+function refreshDayPrompt(){const expected=expectedDayKey(),active=state.activeDay||expected, prompt=$('newDayPrompt');if(prompt){prompt.classList.toggle('hidden',active===expected);const copy=prompt.querySelector('.sub');if(copy)copy.textContent=`Текущая запись: ${fmt(parseISO(active))}. Вчерашние отметки сохранятся. Откроется отдельная запись за ${fmt(parseISO(expected))}.`;}if($('todayHeading'))$('todayHeading').textContent=`Крутки · ${fmt(parseISO(active))}`;}
 function beginNewDay(){const expected=expectedDayKey(),current=dayKey();if(current===expected){refreshDayPrompt();return}state.activeDay=expected;state.selected=expected;if(!state.dailyPlans[expected])state.dailyPlans[expected]={wake:state.wake,first:state.first,bed:state.bed,dailyTarget:Number(state.dailyTarget)||1};save();renderAll();}function mins(t){if(!/^\d\d:\d\d$/.test(t||''))return null;const [h,m]=t.split(':').map(Number);return h<24&&m<60?h*60+m:null}function clock(m){m=(m%1440+1440)%1440;return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`}
 function turnTimes(date=dayKey()){const p=state.dailyPlans?.[date];const first=p?.first||state.first,bed=p?.bed||state.bed;const a=mins(first),b=mins(bed);if(a===null||b===null)return null;const end=b<=a?b+1440:b;if(end<=a)return null;return [0,1,2,3].map(i=>clock(Math.round(a+(end-a)*i/3)))}
 function planFor(date){return state.dailyPlans?.[date]||{dailyTarget:Number(state.dailyTarget)||1,first:state.first,bed:state.bed,wake:state.wake}}
@@ -35,7 +35,23 @@ function renderTurns(){
  const t=times;$('intervalNote').textContent=t?`Сегодняшний ритм: ${t.join(' · ')}. Измени время первой крутки или отбоя, и расписание пересчитается.`:'Проверь время первой крутки и отбоя.';
 }
 function plural(n,a,b,c){const n10=n%10,n100=n%100;return n100>=11&&n100<=14?c:n10===1?a:n10>=2&&n10<=4?b:c}
-function renderTurnHistory(){const host=$('turnHistory'),dates=Object.keys(state.completed).filter(d=>state.completed[d]?.length).sort((a,b)=>b.localeCompare(a));host.innerHTML='';if(!dates.length){host.innerHTML='<div class="empty">Отметки появятся здесь после первой выполненной крутки.</div>';return}dates.slice(0,30).forEach(date=>{const count=state.completed[date].length,target=Math.max(.1,Number(planFor(date).dailyTarget)||1),amount=Math.round(count/4*target*10)/10,el=document.createElement('div');el.className='history-item';el.innerHTML=`<div class="history-marker">${count===4?'✓':count}</div><div class="history-main"><div class="history-date">${fmt(parseISO(date))}</div><div class="history-title">${count} из 4 круток · расчётно ${amount} мм</div><div class="history-detail">${state.completed[date].map(n=>`№${n+1}`).join(' · ')}${count===4?' · дневной план выполнен':''}</div></div>`;host.append(el)})}
+function renderTurnHistory(){
+ const host=$('turnHistory');
+ const dates=[...new Set([...Object.keys(state.completed||{}),...Object.keys(state.dailyPlans||{})])]
+   .filter(d=>/^\\d{4}-\\d{2}-\\d{2}$/.test(d))
+   .sort((a,b)=>b.localeCompare(a));
+ host.innerHTML='';
+ if(!dates.length){host.innerHTML='<div class="empty">История появится после первой сохранённой отметки или плана дня.</div>';return}
+ dates.slice(0,60).forEach(date=>{
+   const slots=Array.isArray(state.completed[date])?state.completed[date]:[];
+   const count=slots.length, target=Math.max(.1,Number(planFor(date).dailyTarget)||1);
+   const amount=Math.round(count/4*target*10)/10,el=document.createElement('div');
+   el.className='history-item';
+   el.innerHTML=`<div class="history-marker">${count===4?'✓':count||'·'}</div><div class="history-main"><div class="history-date">${fmt(parseISO(date))}${date===expectedDayKey()?' · сегодня':''}</div><div class="history-title">${count} из 4 круток · расчётно ${amount} мм</div><div class="history-detail">${count?slots.map(n=>`№${n+1}`).join(' · ')+(count===4?' · дневной план выполнен':''):'День сохранён, отметок пока нет'}</div></div><button class="secondary history-open" data-date="${date}" style="align-self:center;white-space:nowrap">Открыть</button>`;
+   el.querySelector('.history-open').onclick=()=>{state.activeDay=date;state.selected=date;save();renderAll();switchTab('turns');window.scrollTo({top:0,behavior:'smooth'})};
+   host.append(el);
+ });
+}
 function lastDressing(){const ev=state.events.filter(e=>e.kind==='dressing').sort((a,b)=>a.date.localeCompare(b.date));return ev.length?parseISO(ev[ev.length-1].date):null}
 function forecastDates(){const last=lastDressing();if(!last)return[];const result=[],today=parseISO(iso(new Date())),step=Math.max(1,Number(state.interval)||2);for(let i=1;i<=Math.ceil(Number(state.horizon)/step)+2;i++){const d=new Date(last);d.setDate(d.getDate()+i*step);if(d>=today&&d<=new Date(today.getTime()+Number(state.horizon)*86400000))result.push(iso(d))}return result}
 function monthDate(){const [y,m]=state.month.split('-').map(Number);return new Date(y,m-1,1,12)}
@@ -61,6 +77,12 @@ function checkDueReminders(){if(!state.remindersEnabled||!('Notification'in wind
 setInterval(checkDueReminders,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkDueReminders()});
 
 (async()=>{db=await openDB();let stored=await dbRead();if(!stored){try{stored=JSON.parse(localStorage.getItem('moi-ilizarov-pwa-v2')||localStorage.getItem('moi-ilizarov-pwa-v1')||'null')}catch{stored=null}}if(stored){state={...defaults(),...stored,completed:stored.completed||{},dailyPlans:stored.dailyPlans||{},totalGoal:stored.totalGoal||30,interval:Math.max(1,Number(stored.interval)||2),events:(stored.events||defaults().events).map((e,i)=>({...e,id:e.id||`legacy-${i}`})),turnLogs:stored.turnLogs||[]};if(stored.completed&&!stored.turnLogs){state.turnLogs=Object.entries(stored.completed).flatMap(([date,slots])=>slots.map(slot=>({id:`${date}-${slot}`,date,slot,time:null})))}}else state=defaults();
-if(!state.activeDay){const dates=[...Object.keys(state.completed||{}),...Object.keys(state.dailyPlans||{})].sort();state.activeDay=dates.length?dates[dates.length-1]:expectedDayKey();}
+// Open today's workspace by default. Historical days remain intact in their own date keys.
+const expected=expectedDayKey();
+if(!state.activeDay) {
+  const dates=[...Object.keys(state.completed||{}),...Object.keys(state.dailyPlans||{})].sort();
+  state.activeDay=dates.length?dates[dates.length-1]:expected;
+}
+if(state.activeDay!==expected && !state.completed?.[state.activeDay]?.length && !state.dailyPlans?.[state.activeDay]) state.activeDay=expected;
 save();$('interval').value=state.interval;$('horizon').value=state.horizon;if($('remindersEnabled'))$('remindersEnabled').checked=!!state.remindersEnabled;updateReminderStatus();renderAll()})();
 if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>{});
